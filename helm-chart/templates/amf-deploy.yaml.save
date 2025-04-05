@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: amf-open5gs-sctp
+  labels:
+    epc-mode: amf
+spec:
+  type: NodePort
+  selector:
+    epc-mode: amf
+  ports:
+    - protocol: SCTP
+      port: 38412
+      targetPort: 38412
+      nodePort: 30412
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-amf
+  labels:
+    epc-mode: amf
+spec:
+  selector:
+    epc-mode: amf
+  ports:
+    - protocol: TCP
+      port: 80   
+      targetPort: 80      
+---  
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-amf-deployment
+  labels:
+    epc-mode: amf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      epc-mode: amf
+  template:
+    metadata:
+      labels:
+        epc-mode: amf
+    spec: 
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node
+                operator: In
+                values:
+                - amf
+      tolerations:
+      - key: "key1"
+        operator: "Equal"
+        value: "amf"
+        effect: "NoSchedule"    
+      containers:
+        - name: amf
+          image: "{{ .Values.open5gs.image.repository }}:{{ .Values.open5gs.image.tag }}"
+          imagePullPolicy: {{ .Values.open5gs.image.pullPolicy }}
+          command: ["open5gs-amfd", "-c", "/open5gs/config-map/amf.yaml"]
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "125m"
+            limits:
+              memory: "64Mi"
+              cpu: "250m"
+
+          volumeMounts:
+          - name: {{ .Release.Name }}-amf-config
+            mountPath: /open5gs/config-map/amf.yaml
+            subPath: "amf.yaml"
+      volumes:
+        - name: {{ .Release.Name }}-amf-config
+          configMap:
+            name: {{ .Release.Name }}-amf-config
