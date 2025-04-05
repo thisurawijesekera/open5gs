@@ -44,20 +44,20 @@ spec:
       labels:
         epc-mode: amf
     spec: 
-      affinity:
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "Infra"
+          effect: "NoSchedule" 
+      affinity: 
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: node
+              - key: InstanceGroupType
                 operator: In
                 values:
-                - amf
-      tolerations:
-      - key: "key1"
-        operator: "Equal"
-        value: "amf"
-        effect: "NoSchedule"    
+                - infra_nodes      
       containers:
         - name: amf
           image: "{{ .Values.open5gs.image.repository }}:{{ .Values.open5gs.image.tag }}"
